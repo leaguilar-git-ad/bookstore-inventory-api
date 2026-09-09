@@ -1,0 +1,499 @@
+openapi: 3.0.3
+info:
+  title: Bookstore Inventory API
+  version: 1.0.0
+  description: REST API for bookstore inventory management and suggested selling-price
+    calculation using current USD exchange rates.
+paths:
+  /books:
+    get:
+      operationId: books_list
+      parameters:
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: offset
+        required: false
+        in: query
+        description: The initial index from which to return the results.
+        schema:
+          type: integer
+      tags:
+      - books
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedBookList'
+          description: ''
+    post:
+      operationId: books_create
+      tags:
+      - books
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BookRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BookRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Book'
+          description: ''
+  /books/{id}:
+    get:
+      operationId: books_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this book.
+        required: true
+      tags:
+      - books
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Book'
+          description: ''
+    put:
+      operationId: books_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this book.
+        required: true
+      tags:
+      - books
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BookRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BookRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Book'
+          description: ''
+    patch:
+      operationId: books_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this book.
+        required: true
+      tags:
+      - books
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedBookRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedBookRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedBookRequest'
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Book'
+          description: ''
+    delete:
+      operationId: books_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this book.
+        required: true
+      tags:
+      - books
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '204':
+          description: No response body
+  /books/{id}/calculate-price:
+    post:
+      operationId: books_calculate_price_create
+      description: Loads the book's USD cost, obtains the configured USD-to-local
+        exchange rate, applies the required 40% profit margin, persists selling_price_local,
+        and returns the detailed calculation. No request body is required.
+      summary: Calculate suggested selling price
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this book.
+        required: true
+      tags:
+      - books
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalculatePriceResponse'
+          description: ''
+        '404':
+          description: Book not found.
+        '500':
+          description: Unexpected server error.
+        '503':
+          description: A critical dependent service is unavailable.
+  /books/low-stock:
+    get:
+      operationId: books_low_stock_list
+      description: Returns books whose stock quantity is less than or equal to the
+        threshold. The default threshold is 10. Results use the API's global pagination.
+      summary: List books with low stock
+      parameters:
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: offset
+        required: false
+        in: query
+        description: The initial index from which to return the results.
+        schema:
+          type: integer
+      - in: query
+        name: threshold
+        schema:
+          type: integer
+          default: 10
+        description: Maximum stock quantity considered low stock.
+      tags:
+      - books
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedBookList'
+          description: ''
+        '400':
+          description: Threshold is not a non-negative integer.
+  /books/search:
+    get:
+      operationId: books_search_list
+      description: Returns books whose category matches the supplied value case-insensitively.
+        Results use the API's global pagination.
+      summary: Search books by category
+      parameters:
+      - in: query
+        name: category
+        schema:
+          type: string
+        description: Category to search for (case-insensitive exact match).
+        required: true
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: offset
+        required: false
+        in: query
+        description: The initial index from which to return the results.
+        schema:
+          type: integer
+      tags:
+      - books
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedBookList'
+          description: ''
+        '400':
+          description: The category query parameter is missing.
+components:
+  schemas:
+    Book:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        title:
+          type: string
+          maxLength: 255
+        author:
+          type: string
+          maxLength: 255
+        isbn:
+          type: string
+          maxLength: 17
+        cost_usd:
+          type: number
+          format: double
+          maximum: 100000000
+          minimum: 0.01
+          exclusiveMaximum: true
+        selling_price_local:
+          type: number
+          format: double
+          maximum: 10000000000
+          minimum: -10000000000
+          exclusiveMaximum: true
+          exclusiveMinimum: true
+          readOnly: true
+          nullable: true
+        stock_quantity:
+          type: integer
+          minimum: 0
+        category:
+          type: string
+          maxLength: 150
+        supplier_country:
+          type: string
+          maxLength: 100
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - author
+      - category
+      - cost_usd
+      - created_at
+      - id
+      - isbn
+      - selling_price_local
+      - stock_quantity
+      - supplier_country
+      - title
+      - updated_at
+    BookRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        author:
+          type: string
+          minLength: 1
+          maxLength: 255
+        isbn:
+          type: string
+          minLength: 1
+          maxLength: 17
+        cost_usd:
+          type: number
+          format: double
+          maximum: 100000000
+          minimum: 0.01
+          exclusiveMaximum: true
+        stock_quantity:
+          type: integer
+          minimum: 0
+        category:
+          type: string
+          minLength: 1
+          maxLength: 150
+        supplier_country:
+          type: string
+          minLength: 1
+          maxLength: 100
+      required:
+      - author
+      - category
+      - cost_usd
+      - isbn
+      - stock_quantity
+      - supplier_country
+      - title
+    CalculatePriceResponse:
+      type: object
+      description: OpenAPI contract returned by POST /books/{id}/calculate-price.
+      properties:
+        book_id:
+          type: integer
+        cost_usd:
+          type: number
+          format: double
+          maximum: 100000000
+          minimum: -100000000
+          exclusiveMaximum: true
+          exclusiveMinimum: true
+        exchange_rate:
+          type: number
+          format: double
+          maximum: 10000000000
+          minimum: -10000000000
+          exclusiveMaximum: true
+          exclusiveMinimum: true
+        cost_local:
+          type: number
+          format: double
+          maximum: 10000000000
+          minimum: -10000000000
+          exclusiveMaximum: true
+          exclusiveMinimum: true
+        margin_percentage:
+          type: integer
+        selling_price_local:
+          type: number
+          format: double
+          maximum: 10000000000
+          minimum: -10000000000
+          exclusiveMaximum: true
+          exclusiveMinimum: true
+        currency:
+          type: string
+          maxLength: 3
+        calculation_timestamp:
+          type: string
+          format: date-time
+      required:
+      - book_id
+      - calculation_timestamp
+      - cost_local
+      - cost_usd
+      - currency
+      - exchange_rate
+      - margin_percentage
+      - selling_price_local
+    PaginatedBookList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=400&limit=100
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=200&limit=100
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Book'
+    PatchedBookRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        author:
+          type: string
+          minLength: 1
+          maxLength: 255
+        isbn:
+          type: string
+          minLength: 1
+          maxLength: 17
+        cost_usd:
+          type: number
+          format: double
+          maximum: 100000000
+          minimum: 0.01
+          exclusiveMaximum: true
+        stock_quantity:
+          type: integer
+          minimum: 0
+        category:
+          type: string
+          minLength: 1
+          maxLength: 150
+        supplier_country:
+          type: string
+          minLength: 1
+          maxLength: 100
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid

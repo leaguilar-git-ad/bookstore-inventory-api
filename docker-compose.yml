@@ -1,0 +1,12 @@
+services:
+  web:
+    build: .
+    container_name: bookstore-inventory-api
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    command: >
+      sh -c "python manage.py migrate &&
+             gunicorn core.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 60"
+    restart: unless-stopped

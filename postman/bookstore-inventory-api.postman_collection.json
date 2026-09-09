@@ -1,0 +1,84 @@
+{
+  "info": {
+    "name": "Bookstore Inventory API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000"
+    },
+    {
+      "key": "book_id",
+      "value": "1"
+    }
+  ],
+  "item": [
+    {
+      "name": "List books",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/books?limit=10&offset=0"
+      }
+    },
+    {
+      "name": "Create book",
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"El Quijote\",\n  \"author\": \"Miguel de Cervantes\",\n  \"isbn\": \"978-84-376-0494-7\",\n  \"cost_usd\": \"15.99\",\n  \"stock_quantity\": 25,\n  \"category\": \"Literatura Clásica\",\n  \"supplier_country\": \"ES\"\n}"
+        },
+        "url": "{{base_url}}/books"
+      }
+    },
+    {
+      "name": "Get book",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/books/{{book_id}}"
+      }
+    },
+    {
+      "name": "Update book",
+      "request": {
+        "method": "PUT",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"El Quijote - Edición Revisada\",\n  \"author\": \"Miguel de Cervantes\",\n  \"isbn\": \"9788437604947\",\n  \"cost_usd\": \"17.50\",\n  \"stock_quantity\": 20,\n  \"category\": \"Literatura Clásica\",\n  \"supplier_country\": \"ES\"\n}"
+        },
+        "url": "{{base_url}}/books/{{book_id}}"
+      }
+    },
+    {
+      "name": "Search by category",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/books/search?category=Literatura%20Clasica"
+      }
+    },
+    {
+      "name": "Low stock",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/books/low-stock?threshold=10"
+      }
+    },
+    {
+      "name": "Calculate price",
+      "request": {
+        "method": "POST",
+        "url": "{{base_url}}/books/{{book_id}}/calculate-price"
+      }
+    },
+    {
+      "name": "Delete book",
+      "request": {
+        "method": "DELETE",
+        "url": "{{base_url}}/books/{{book_id}}"
+      }
+    }
+  ]
+}
