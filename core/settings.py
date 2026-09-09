@@ -14,7 +14,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 env = environ.Env(
     DJANGO_DEBUG=(bool, False),
     DB_PORT=(int, 5432),
-    DB_CONN_MAX_AGE=(int, 60),
+    DB_CONN_MAX_AGE=(int, 30),
+    DB_CONN_HEALTH_CHECKS=(bool, True),
+    DB_CONNECT_TIMEOUT=(int, 10),
+    DB_KEEPALIVES_IDLE=(int, 30),
+    DB_KEEPALIVES_INTERVAL=(int, 10),
+    DB_KEEPALIVES_COUNT=(int, 3),
     EXCHANGE_RATE_TIMEOUT=(float, 5.0),
 )
 
@@ -146,15 +151,51 @@ DATABASES = {
             "DB_PORT",
             default=5432,
         ),
+
+        # Keep DB sessions short enough for a serverless Cloud Run
+        # instance while still avoiding a new TLS connection per request.
         "CONN_MAX_AGE": env.int(
             "DB_CONN_MAX_AGE",
-            default=60,
+            default=30,
         ),
+
+        # Django 4.2 checks a persistent connection before reusing it.
+        # If Supabase/Supavisor closed a stale connection, Django opens a
+        # fresh one instead of failing the next request immediately.
+        "CONN_HEALTH_CHECKS": env.bool(
+            "DB_CONN_HEALTH_CHECKS",
+            default=True,
+        ),
+
         "OPTIONS": {
             "sslmode": env(
                 "DB_SSLMODE",
                 default="require",
             ),
+
+            # PostgreSQL connection establishment timeout in seconds.
+            "connect_timeout": env.int(
+                "DB_CONNECT_TIMEOUT",
+                default=10,
+            ),
+
+            # TCP keepalives help detect dead/stale network connections.
+            "keepalives": 1,
+            "keepalives_idle": env.int(
+                "DB_KEEPALIVES_IDLE",
+                default=30,
+            ),
+            "keepalives_interval": env.int(
+                "DB_KEEPALIVES_INTERVAL",
+                default=10,
+            ),
+            "keepalives_count": env.int(
+                "DB_KEEPALIVES_COUNT",
+                default=3,
+            ),
+
+            # Makes connections easy to identify in PostgreSQL/Supabase logs.
+            "application_name": "bookstore-inventory-api",
         },
     }
 }
