@@ -16,6 +16,7 @@ RUN chown -R app:app /app
 
 USER app
 
-EXPOSE 8000
+# Cambiamos a 8080 para que coincida con el estándar de Cloud Run
+EXPOSE 8080
 
-CMD ["gunicorn", "core.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3", "--timeout", "60"]
+CMD ["sh", "-c", "gunicorn core.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers 3 --timeout 60"]

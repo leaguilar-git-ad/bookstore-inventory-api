@@ -1,84 +1,356 @@
 {
   "info": {
-    "name": "Bookstore Inventory API",
+    "_postman_id": "bookstore-inventory-api-production",
+    "name": "Bookstore Inventory API - Production",
+    "description": "Production-ready Postman collection for the Bookstore Inventory API deployed on Google Cloud Run. Uses {{base_url}} and captures {{book_id}} automatically after creating a book.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     {
       "key": "base_url",
-      "value": "http://localhost:8000"
+      "value": "https://bookstore-inventory-api-546900969932.europe-west2.run.app",
+      "type": "string"
     },
     {
       "key": "book_id",
-      "value": "1"
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "category",
+      "value": "Literatura Clásica",
+      "type": "string"
+    },
+    {
+      "key": "low_stock_threshold",
+      "value": "10",
+      "type": "string"
     }
   ],
   "item": [
     {
-      "name": "List books",
-      "request": {
-        "method": "GET",
-        "url": "{{base_url}}/books?limit=10&offset=0"
-      }
-    },
-    {
-      "name": "Create book",
-      "request": {
-        "method": "POST",
-        "header": [{"key": "Content-Type", "value": "application/json"}],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"title\": \"El Quijote\",\n  \"author\": \"Miguel de Cervantes\",\n  \"isbn\": \"978-84-376-0494-7\",\n  \"cost_usd\": \"15.99\",\n  \"stock_quantity\": 25,\n  \"category\": \"Literatura Clásica\",\n  \"supplier_country\": \"ES\"\n}"
+      "name": "01 - Books CRUD",
+      "item": [
+        {
+          "name": "Create book",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Generate a 13-digit numeric ISBN-like value for repeatable test runs.",
+                  "pm.variables.set('test_isbn', Date.now().toString().slice(-13));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "pm.test('Created book has an id', function () {",
+                  "    pm.expect(json.id).to.exist;",
+                  "});",
+                  "",
+                  "if (json.id) {",
+                  "    pm.environment.set('book_id', String(json.id));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"El Quijote\",\n  \"author\": \"Miguel de Cervantes\",\n  \"isbn\": \"{{test_isbn}}\",\n  \"cost_usd\": \"15.99\",\n  \"stock_quantity\": 8,\n  \"category\": \"{{category}}\",\n  \"supplier_country\": \"ES\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/books",
+            "description": "Creates a book and stores the returned id in the environment variable {{book_id}}."
+          }
         },
-        "url": "{{base_url}}/books"
-      }
-    },
-    {
-      "name": "Get book",
-      "request": {
-        "method": "GET",
-        "url": "{{base_url}}/books/{{book_id}}"
-      }
-    },
-    {
-      "name": "Update book",
-      "request": {
-        "method": "PUT",
-        "header": [{"key": "Content-Type", "value": "application/json"}],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"title\": \"El Quijote - Edición Revisada\",\n  \"author\": \"Miguel de Cervantes\",\n  \"isbn\": \"9788437604947\",\n  \"cost_usd\": \"17.50\",\n  \"stock_quantity\": 20,\n  \"category\": \"Literatura Clásica\",\n  \"supplier_country\": \"ES\"\n}"
+        {
+          "name": "List books",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "const json = pm.response.json();",
+                  "pm.test('Response is paginated', function () {",
+                  "    pm.expect(json).to.have.property('count');",
+                  "    pm.expect(json).to.have.property('results');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/books?limit=10&offset=0",
+            "description": "Lists books using DRF LimitOffsetPagination."
+          }
         },
-        "url": "{{base_url}}/books/{{book_id}}"
-      }
+        {
+          "name": "Get book by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "const json = pm.response.json();",
+                  "pm.test('Correct book returned', function () {",
+                  "    pm.expect(String(json.id)).to.eql(pm.environment.get('book_id'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/books/{{book_id}}"
+          }
+        },
+        {
+          "name": "Update book (PUT)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"El Quijote - Edición Revisada\",\n  \"author\": \"Miguel de Cervantes\",\n  \"isbn\": \"{{test_isbn}}\",\n  \"cost_usd\": \"17.50\",\n  \"stock_quantity\": 20,\n  \"category\": \"{{category}}\",\n  \"supplier_country\": \"ES\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/books/{{book_id}}"
+          }
+        },
+        {
+          "name": "Partial update book (PATCH)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stock_quantity\": 8\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/books/{{book_id}}"
+          }
+        }
+      ]
     },
     {
-      "name": "Search by category",
-      "request": {
-        "method": "GET",
-        "url": "{{base_url}}/books/search?category=Literatura%20Clasica"
-      }
+      "name": "02 - Queries",
+      "item": [
+        {
+          "name": "Search by category",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/books/search?category={{category}}",
+            "description": "Searches using the same accented category value used during book creation."
+          }
+        },
+        {
+          "name": "Low stock",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/books/low-stock?threshold={{low_stock_threshold}}"
+          }
+        }
+      ]
     },
     {
-      "name": "Low stock",
-      "request": {
-        "method": "GET",
-        "url": "{{base_url}}/books/low-stock?threshold=10"
-      }
+      "name": "03 - Pricing",
+      "item": [
+        {
+          "name": "Calculate suggested price",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "const json = pm.response.json();",
+                  "pm.test('Calculation response has required fields', function () {",
+                  "    ['book_id','cost_usd','exchange_rate','cost_local','margin_percentage','selling_price_local','currency','calculation_timestamp']",
+                  "      .forEach(function (key) { pm.expect(json).to.have.property(key); });",
+                  "});",
+                  "pm.test('Margin is exactly 40 percent', function () {",
+                  "    pm.expect(json.margin_percentage).to.eql(40);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/books/{{book_id}}/calculate-price",
+            "description": "Calls the exchange-rate integration, applies the exact 40% margin and persists selling_price_local."
+          }
+        }
+      ]
     },
     {
-      "name": "Calculate price",
-      "request": {
-        "method": "POST",
-        "url": "{{base_url}}/books/{{book_id}}/calculate-price"
-      }
+      "name": "04 - Documentation",
+      "item": [
+        {
+          "name": "OpenAPI Schema",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/schema/"
+          }
+        },
+        {
+          "name": "Swagger UI",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/docs/"
+          }
+        }
+      ]
     },
     {
-      "name": "Delete book",
-      "request": {
-        "method": "DELETE",
-        "url": "{{base_url}}/books/{{book_id}}"
-      }
+      "name": "05 - Cleanup",
+      "item": [
+        {
+          "name": "Delete book",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 204', function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/books/{{book_id}}",
+            "description": "Run this last when executing the collection end-to-end."
+          }
+        }
+      ]
     }
   ]
 }
