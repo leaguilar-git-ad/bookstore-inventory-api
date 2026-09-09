@@ -1,122 +1,360 @@
+```markdown
 # Bookstore Inventory API
 
-REST API built with Python, Django 4.x, Django REST Framework, PostgreSQL/Supabase, Docker and Gunicorn.
+REST API for bookstore inventory management built with **Django**, **Django REST Framework**, PostgreSQL/Supabase and containerized deployment.
 
-## Features
+The application provides inventory management for books, ISBN validation, price calculation using external exchange rates, API documentation through OpenAPI/Swagger, and cloud deployment using Google Cloud Run.
 
-- CRUD for books.
-- PostgreSQL only; no SQLite fallback.
-- Global limit/offset pagination.
+---
+
+# Technology Stack
+
+| Technology | Version / Service |
+|---|---|
+| Python | 3.10+ |
+| Django | 4.2 |
+| Django REST Framework | Latest compatible |
+| Database | PostgreSQL |
+| Cloud Database | Supabase PostgreSQL |
+| Database Connectivity | Supabase Connection Pooler |
+| WSGI Server | Gunicorn |
+| Containerization | Docker & Docker Compose |
+| Cloud Deployment | Google Cloud Run |
+| API Documentation | drf-spectacular (Swagger/OpenAPI) |
+
+---
+
+# Production Deployment
+
+The API is deployed publicly using **Google Cloud Run**.
+
+## Production API
+
+```
+
+[https://bookstore-inventory-api-546900969932.europe-west2.run.app](https://bookstore-inventory-api-546900969932.europe-west2.run.app)
+
+```
+
+## Swagger UI
+
+Interactive API documentation:
+
+```
+
+[https://bookstore-inventory-api-546900969932.europe-west2.run.app/api/docs/](https://bookstore-inventory-api-546900969932.europe-west2.run.app/api/docs/)
+
+````
+
+---
+
+# Features
+
+- Complete CRUD operations for books.
+- PostgreSQL-only architecture.
+- Supabase PostgreSQL cloud database integration.
+- Containerized execution using Docker.
+- Automatic migrations during local Docker startup.
+- Global pagination using Django REST Framework.
 - ISBN normalization and uniqueness validation.
-- Database constraints for positive cost, non-negative stock and canonical ISBN format.
-- External USD exchange-rate integration with a configurable fallback rate.
-- Suggested selling price using a strict 40% margin.
-- Category search and low-stock endpoints.
-- Consistent JSON handling for validation, not-found, database and unexpected errors.
+- Database constraints for:
+  - Positive book cost.
+  - Non-negative stock quantity.
+  - Unique ISBN values.
+- Category search endpoint.
+- Low-stock filtering endpoint.
+- External USD exchange-rate integration.
+- Suggested selling price calculation with a strict 40% margin.
+- Swagger/OpenAPI documentation.
+- Structured JSON error handling.
 
-## Requirements
+---
+
+# Requirements
+
+Before running the project locally, install:
 
 - Python 3.10+
-- PostgreSQL 14+ or Supabase PostgreSQL
-- Docker / Docker Compose (optional)
+- Docker
+- Docker Compose
+- Git
 
-## Environment
+The application requires a PostgreSQL-compatible database.
 
-Copy the example file:
+The recommended database service is:
+
+**Supabase PostgreSQL**
+
+---
+
+# Environment Configuration
+
+Create your local environment file from the provided example:
 
 ```bash
 cp .env.example .env
-```
+````
 
-Configure the Supabase connection values in `.env`.
+Configure the required variables.
 
-Important variables:
+Example:
 
 ```env
-DJANGO_SECRET_KEY=...
+DJANGO_SECRET_KEY=your-secret-key
 DJANGO_DEBUG=True
 DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1
+
+# ============================================================
+# SUPABASE POSTGRESQL
+# Shared / Session Pooler
+# ============================================================
+
 DB_NAME=postgres
-DB_USER=postgres
+DB_USER=postgres.<project-ref>
 DB_PASSWORD=...
-DB_HOST=db.<project-ref>.supabase.co
+DB_HOST=aws-0-eu-west-2.pooler.supabase.com
 DB_PORT=5432
 DB_SSLMODE=require
-LOCAL_CURRENCY=EUR
+
+DB_CONN_MAX_AGE=30
+DB_CONN_HEALTH_CHECKS=True
+DB_CONNECT_TIMEOUT=10
+
+# ============================================================
+# BUSINESS CONFIGURATION
+# ============================================================
+
+LOCAL_CURRENCY=VES
 DEFAULT_EXCHANGE_RATE=1.0
+
+# ============================================================
+# EXCHANGE RATE API
+# ============================================================
+
+EXCHANGE_RATE_API_URL=https://api.exchangerate-api.com/v4/latest/USD
+EXCHANGE_RATE_TIMEOUT=5
 ```
 
-If the deployment environment cannot reach the Supabase direct database hostname, use the Supabase connection-pooler host/port values instead.
+---
 
-## Run locally
+# Database Configuration
+
+The project uses **Supabase PostgreSQL through the official Supabase connection pooler**.
+
+The production database connection is configured using the Shared/Session Pooler:
+
+```
+Host:
+aws-0-eu-west-2.pooler.supabase.com
+
+Port:
+5432
+
+Database:
+postgres
+```
+
+The pooler is part of the application database architecture and is configured through environment variables.
+
+---
+
+# Installation and Local Execution
+
+## 1. Clone repository
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
-# Windows PowerShell: .venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-python manage.py migrate
-python manage.py runserver
+git clone <repository-url>
+
+cd bookstore-inventory-api
 ```
 
-API base URL:
+---
 
-```text
-http://localhost:8000/books
-```
+## 2. Configure environment variables
 
-## Run with Docker Compose
+Create the environment file:
 
 ```bash
 cp .env.example .env
-# Fill in the real Supabase credentials
+```
+
+Update the Supabase PostgreSQL credentials.
+
+---
+
+## 3. Run application with Docker Compose
+
+Build and start the application:
+
+```bash
 docker compose up --build
 ```
 
-The service starts on `http://localhost:8000` and applies Django migrations before Gunicorn starts.
+The Docker startup process performs:
 
-## Endpoints
+1. Database migrations.
+2. Gunicorn startup.
+3. API exposure on port `8000`.
 
-| Method | Path | Description |
-|---|---|---|
-| GET | `/books` | Paginated book list |
-| POST | `/books` | Create a book |
-| GET | `/books/{id}` | Retrieve a book |
-| PUT | `/books/{id}` | Full update |
-| PATCH | `/books/{id}` | Partial update provided by DRF |
-| DELETE | `/books/{id}` | Delete a book |
-| GET | `/books/search?category=Literatura%20Clásica` | Search by category |
-| GET | `/books/low-stock?threshold=10` | Find books at or below threshold |
-| POST | `/books/{id}/calculate-price` | Calculate and persist suggested local price |
+For local Docker execution, migrations are executed automatically before starting Gunicorn.
 
-Pagination uses DRF `LimitOffsetPagination`:
+The local API will be available at:
+
+```
+http://localhost:8000
+```
+
+---
+
+# API Documentation (Swagger / OpenAPI)
+
+The project uses **drf-spectacular** for automatic OpenAPI documentation.
+
+## Local Swagger UI
+
+```
+http://localhost:8000/api/docs/
+```
+
+## Local OpenAPI Schema
+
+```
+http://localhost:8000/api/schema/
+```
+
+## Local Redoc
+
+```
+http://localhost:8000/api/redoc/
+```
+
+Production Swagger:
+
+```
+https://bookstore-inventory-api-546900969932.europe-west2.run.app/api/docs/
+```
+
+---
+
+# Postman Collection
+
+The repository includes the Postman collection and production environment configuration under:
+
+```
+postman/
+```
+
+Files included:
+
+```
+postman/
+├── bookstore-inventory-api.postman_collection.json
+└── bookstore-inventory-api-production.postman_environment.json
+```
+
+The environment file is already configured with the production variable:
 
 ```text
+base_url
+```
+
+with the Cloud Run deployment URL:
+
+```
+https://bookstore-inventory-api-546900969932.europe-west2.run.app
+```
+
+The collection can be imported directly into Postman together with the production environment to execute API validations without requiring a local application execution.
+
+---
+
+# API Endpoints
+
+## Books CRUD
+
+| Method | Endpoint      | Description                |
+| ------ | ------------- | -------------------------- |
+| GET    | `/books`      | List books with pagination |
+| POST   | `/books`      | Create book                |
+| GET    | `/books/{id}` | Retrieve book              |
+| PUT    | `/books/{id}` | Full update                |
+| PATCH  | `/books/{id}` | Partial update             |
+| DELETE | `/books/{id}` | Delete book                |
+
+---
+
+# Pagination
+
+The list endpoint uses Django REST Framework pagination.
+
+Example:
+
+```
 GET /books?limit=10&offset=0
 ```
 
-## Create book example
+Parameters:
 
-```bash
-curl -X POST http://localhost:8000/books \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "El Quijote",
-    "author": "Miguel de Cervantes",
-    "isbn": "978-84-376-0494-7",
-    "cost_usd": "15.99",
-    "stock_quantity": 25,
-    "category": "Literatura Clásica",
-    "supplier_country": "ES"
-  }'
+| Parameter | Description                |
+| --------- | -------------------------- |
+| limit     | Number of records returned |
+| offset    | Initial record position    |
+
+---
+
+# Search and Filters
+
+## Search by category
+
+Endpoint:
+
+```
+GET /books/search?category={category}
 ```
 
-The ISBN is normalized before persistence, so the stored value is `9788437604947`. This prevents formatted and unformatted variants of the same ISBN from bypassing the unique constraint.
+Example:
 
-## Calculate price example
+```
+GET /books/search?category=Literatura Clasica
+```
 
-```bash
-curl -X POST http://localhost:8000/books/1/calculate-price
+---
+
+## Low stock filter
+
+Endpoint:
+
+```
+GET /books/low-stock?threshold=10
+```
+
+Returns books with stock quantity equal or below the configured threshold.
+
+---
+
+# Price Calculation Endpoint
+
+## Calculate suggested selling price
+
+Endpoint:
+
+```
+POST /books/{id}/calculate-price
+```
+
+The calculation process:
+
+1. Reads the book `cost_usd`.
+2. Retrieves the current USD exchange rate.
+3. Converts the cost to local currency.
+4. Applies a 40% profit margin.
+5. Updates `selling_price_local`.
+6. Returns the calculation details.
+
+Formula:
+
+```
+selling_price_local = cost_usd * exchange_rate * 1.40
 ```
 
 Example response:
@@ -134,20 +372,105 @@ Example response:
 }
 ```
 
-Formula:
+If the external exchange-rate service is unavailable, the application uses:
 
-```text
-selling_price_local = cost_usd * exchange_rate * 1.40
+```
+DEFAULT_EXCHANGE_RATE
 ```
 
-If the exchange-rate API is unavailable, returns an invalid payload, times out or the requested currency is absent, the service logs the failure and uses `DEFAULT_EXCHANGE_RATE` instead of collapsing the request.
+to keep the service available.
 
-## Production notes
+---
 
-- Set `DJANGO_DEBUG=False`.
-- Use a strong `DJANGO_SECRET_KEY`.
-- Set `DJANGO_ALLOWED_HOSTS` to the public API hostname.
-- Keep Supabase credentials only in the cloud provider's secret/environment settings.
-- Keep `DB_SSLMODE=require` for Supabase.
-- Run migrations as a release/pre-deploy step when the hosting platform supports it. The Compose command runs migrations automatically for this technical exercise.
-- The included Postman collection uses a `base_url` variable. Replace it with the public deployment URL before exporting the final submission.
+# Business Rules
+
+## ISBN Validation
+
+The API applies ISBN normalization before persistence.
+
+Rules:
+
+* ISBN must contain 10 or 13 digits.
+* Formatted and unformatted ISBN values are normalized.
+* Duplicate ISBN values are rejected.
+
+Example:
+
+Input:
+
+```
+978-84-376-0494-7
+```
+
+Stored value:
+
+```
+9788437604947
+```
+
+---
+
+## Book Cost Validation
+
+Rule:
+
+```
+cost_usd > 0
+```
+
+Values equal to or below zero are rejected.
+
+---
+
+## Stock Validation
+
+Rule:
+
+```
+stock_quantity >= 0
+```
+
+Negative inventory values are not allowed.
+
+---
+
+# Production Configuration Notes
+
+For cloud deployment:
+
+* Set `DJANGO_DEBUG=False`.
+* Use a secure `DJANGO_SECRET_KEY`.
+* Store credentials using cloud secret management.
+* Do not commit `.env` files with real credentials.
+* Keep Supabase SSL enabled.
+* Configure production environment variables through the cloud provider.
+
+---
+
+# Project Structure
+
+```
+bookstore-inventory-api/
+
+├── core/
+│   ├── settings.py
+│   ├── urls.py
+│   └── wsgi.py
+│
+├── inventory/
+│   ├── models.py
+│   ├── serializers.py
+│   ├── services.py
+│   ├── views.py
+│   └── urls.py
+│
+├── postman/
+│   ├── bookstore-inventory-api.postman_collection.json
+│   └── bookstore-inventory-api-production.postman_environment.json
+│
+├── Dockerfile
+├── docker-compose.yml
+├── requirements.txt
+├── .env.example
+└── README.md
+```
